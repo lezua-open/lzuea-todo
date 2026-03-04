@@ -11,7 +11,7 @@
     "preview": "electron-vite preview",
     "dist": "electron-builder",
     "dist:win": "electron-builder --win",
-    "postinstall": "electron-builder install-app-deps"
+    "rebuild": "electron-builder install-app-deps"
   },
   "dependencies": {
     "ant-design-vue": "^4.2.6",
