@@ -30,12 +30,19 @@ jobs:
       - name: Package (portable)
         run: npx electron-builder --win portable --publish never
 
+      - name: Debug - List files
+        shell: pwsh
+        run: |
+          Get-ChildItem -Recurse | Where-Object { $_.Name -like "*.exe" } | Select-Object FullName
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: lzuea-todo-win
-          path: release/
-          if-no-files-found: error
+          path: |
+            **/*.exe
+            !node_modules/**
+          if-no-files-found: warn
 
   release:
     needs: build
