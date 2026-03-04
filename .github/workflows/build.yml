@@ -34,8 +34,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lzuea-todo-win
-          path: |
-            release/*.exe
+          path: release/
           if-no-files-found: error
 
   release:
@@ -53,7 +52,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: release/*.exe
+          files: release/**.exe
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
