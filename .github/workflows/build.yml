@@ -21,7 +21,10 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build and Package
+      - name: Build with electron-vite
+        run: npx electron-vite build
+
+      - name: Package with electron-builder
         run: npx electron-builder --win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
