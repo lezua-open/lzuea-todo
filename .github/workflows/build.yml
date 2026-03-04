@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     tags: ['v*']
+  workflow_dispatch:
 
 jobs:
   build:
@@ -12,6 +13,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -32,9 +35,8 @@ jobs:
         with:
           name: lzuea-todo-win
           path: |
-            release/
-            !release/win-unpacked/
-          if-no-files-found: warn
+            release/*.exe
+          if-no-files-found: error
 
   release:
     needs: build
@@ -51,7 +53,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: release/**.exe
+          files: release/*.exe
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
