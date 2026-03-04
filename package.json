@@ -14,7 +14,6 @@
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
-    "@electron-toolkit/utils": "^4.0.0",
     "ant-design-vue": "^4.2.6",
     "pinia": "^2.3.1"
   },

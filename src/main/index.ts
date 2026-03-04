@@ -1,6 +1,5 @@
 import { app, shell, BrowserWindow, ipcMain, Tray, Menu, nativeImage } from 'electron'
 import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import Store from './store'
 
 // 窗口状态存储
@@ -17,6 +16,8 @@ const windowState = new Store({
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
+
+const isDev = !app.isPackaged
 
 function createWindow(): void {
   const state = windowState.get()
@@ -50,8 +51,8 @@ function createWindow(): void {
   mainWindow.setMinimumSize(350, 450)
 
   // 加载内容
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  if (isDev) {
+    mainWindow.loadURL('http://localhost:5173')
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
@@ -173,14 +174,6 @@ ipcMain.handle('window:get-always-on-top', () => {
 
 // 应用生命周期
 app.whenReady().then(() => {
-  // 设置应用ID
-  electronApp.setAppUserModelId('com.electron.lzuea-todo')
-
-  // 监听窗口创建
-  app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
-  })
-
   createWindow()
   createTray()
 
@@ -196,11 +189,3 @@ app.on('window-all-closed', () => {
     // 不调用 app.quit()，保持托盘运行
   }
 })
-
-// 退出前清理
-try {
-  require('electron-reloader')(module, {
-    debug: true,
-    watchRenderer: true
-  })
-} catch (_) {}
