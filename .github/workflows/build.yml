@@ -36,7 +36,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lzuea-todo-win
-          path: release/*.exe
+          path: release/
 
   release:
     needs: build
@@ -53,6 +53,6 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: release/*.exe
+          files: release/**
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

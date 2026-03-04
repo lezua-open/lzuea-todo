@@ -35,8 +35,7 @@
       "output": "release"
     },
     "files": [
-      "out/**/*",
-      "build/**/*"
+      "out/**/*"
     ],
     "win": {
       "target": [
@@ -48,8 +47,7 @@
           "target": "portable",
           "arch": ["x64"]
         }
-      ],
-      "icon": "build/icon.ico"
+      ]
     },
     "nsis": {
       "oneClick": false,
