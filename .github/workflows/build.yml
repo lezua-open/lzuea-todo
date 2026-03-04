@@ -22,18 +22,16 @@ jobs:
         run: npm install
 
       - name: Build
-        run: npm run build
+        run: npx electron-vite build
 
-      - name: Package
-        run: npm run dist:win
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Package (portable)
+        run: npx electron-builder --win portable --publish never
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: lzuea-todo-win
-          path: release/
+          path: release/*.exe
 
   release:
     needs: build
@@ -50,7 +48,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: release/**
+          files: release/*.exe
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
