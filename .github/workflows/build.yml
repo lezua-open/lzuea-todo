@@ -27,16 +27,14 @@ jobs:
       - name: Package (portable)
         run: npx electron-builder --win portable --publish never
 
-      - name: Check release directory
-        run: |
-          echo "Contents of release directory:"
-          ls -la release/
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: lzuea-todo-win
-          path: release/
+          path: |
+            release/
+            !release/win-unpacked/
+          if-no-files-found: warn
 
   release:
     needs: build
@@ -50,15 +48,10 @@ jobs:
           name: lzuea-todo-win
           path: release
 
-      - name: Check downloaded artifacts
-        run: |
-          echo "Contents of release directory:"
-          ls -la release/
-
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: release/**
+          files: release/**.exe
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
