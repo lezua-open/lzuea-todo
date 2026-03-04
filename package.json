@@ -30,6 +30,7 @@
   "build": {
     "appId": "com.lezua.todo",
     "productName": "LzueaTodo",
+    "forceCodeSigning": false,
     "directories": {
       "output": "release"
     },
