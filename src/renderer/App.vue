@@ -1,10 +1,13 @@
 <template>
-  <div class="app-container">
+  <AuthView v-if="!isLoggedIn" />
+  <div v-else class="app-container">
     <!-- 标题栏 -->
     <div class="title-bar">
       <div class="title">
         <span class="title-icon">✓</span>
         <span>Lzuea Todo</span>
+        <a-tag v-if="authStore.isLocalMode" color="orange">本地模式</a-tag>
+        <a-tag v-else-if="authStore.user" color="blue">{{ authStore.user.username }}</a-tag>
       </div>
       <div class="window-controls">
         <a-button 
@@ -16,6 +19,26 @@
           title="置顶"
         >
           <pushpin-outlined />
+        </a-button>
+        <a-button 
+          type="text" 
+          size="small"
+          class="control-btn sync"
+          :class="{ 'syncing': isSyncing }"
+          @click="handleSync"
+          :disabled="isSyncing || authStore.isLocalMode"
+          title="同步"
+        >
+          <sync-outlined :spin="isSyncing" />
+        </a-button>
+        <a-button 
+          type="text" 
+          size="small"
+          class="control-btn"
+          @click="handleLogout"
+          title="退出登录"
+        >
+          <logout-outlined />
         </a-button>
         <a-button 
           type="text" 
@@ -121,13 +144,16 @@
     <div class="status-bar">
       <span>{{ activeCount }} 个待办任务</span>
       <span v-if="alwaysOnTop" class="pin-indicator">📌 置顶中</span>
+      <span v-if="lastSyncTime" class="sync-indicator">🔄 {{ lastSyncTime }}</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useTodoStore } from './stores/todo'
+import { useAuthStore } from './stores/auth'
+import AuthView from './views/AuthView.vue'
 import TodoItem from './components/TodoItem.vue'
 import {
   PlusOutlined,
@@ -135,24 +161,31 @@ import {
   MinusOutlined,
   CloseOutlined,
   DeleteOutlined,
-  InboxOutlined
+  InboxOutlined,
+  SyncOutlined,
+  LogoutOutlined
 } from '@ant-design/icons-vue'
+import { message, Modal } from 'ant-design-vue'
 import type { TodoFilter } from './types/todo'
 
-const store = useTodoStore()
+const todoStore = useTodoStore()
+const authStore = useAuthStore()
 const newTodoText = ref('')
+const isSyncing = ref(false)
+const lastSyncTime = ref('')
 
 // 计算属性
+const isLoggedIn = computed(() => authStore.isLoggedIn)
 const filter = computed({
-  get: () => store.filter,
-  set: (val) => store.setFilter(val)
+  get: () => todoStore.filter,
+  set: (val) => todoStore.setFilter(val)
 })
 
-const alwaysOnTop = computed(() => store.alwaysOnTop)
-const filteredTodos = computed(() => store.filteredTodos)
-const activeCount = computed(() => store.activeCount)
-const completedCount = computed(() => store.completedCount)
-const totalCount = computed(() => store.totalCount)
+const alwaysOnTop = computed(() => todoStore.alwaysOnTop)
+const filteredTodos = computed(() => todoStore.filteredTodos)
+const activeCount = computed(() => todoStore.activeCount)
+const completedCount = computed(() => todoStore.completedCount)
+const totalCount = computed(() => todoStore.totalCount)
 
 const emptyText = computed(() => {
   switch (filter.value) {
@@ -168,29 +201,29 @@ const emptyText = computed(() => {
 // 方法
 const handleAddTodo = () => {
   if (newTodoText.value.trim()) {
-    store.addTodo(newTodoText.value)
+    todoStore.addTodo(newTodoText.value)
     newTodoText.value = ''
   }
 }
 
 const handleToggle = (id: string) => {
-  store.toggleTodo(id)
+  todoStore.toggleTodo(id)
 }
 
 const handleEdit = (id: string, text: string) => {
-  store.editTodo(id, text)
+  todoStore.editTodo(id, text)
 }
 
 const handleDelete = (id: string) => {
-  store.deleteTodo(id)
+  todoStore.deleteTodo(id)
 }
 
 const handleClearCompleted = () => {
-  store.clearCompleted()
+  todoStore.clearCompleted()
 }
 
 const handleFilterChange = (e: any) => {
-  store.setFilter(e.target.value as TodoFilter)
+  todoStore.setFilter(e.target.value as TodoFilter)
 }
 
 // 窗口控制
@@ -203,15 +236,76 @@ const handleClose = () => {
 }
 
 const handleToggleAlwaysOnTop = async () => {
-  await store.toggleAlwaysOnTop()
+  await todoStore.toggleAlwaysOnTop()
+}
+
+// 同步功能
+const handleSync = async () => {
+  if (authStore.isLocalMode) {
+    message.info('本地模式下无法同步')
+    return
+  }
+  
+  isSyncing.value = true
+  try {
+    await todoStore.syncWithCloud()
+    lastSyncTime.value = new Date().toLocaleTimeString()
+    message.success('同步成功！')
+  } catch (error: any) {
+    message.error(error.message || '同步失败')
+  } finally {
+    isSyncing.value = false
+  }
+}
+
+// 登出
+const handleLogout = () => {
+  Modal.confirm({
+    title: '确认退出？',
+    content: '退出后将返回登录页面',
+    onOk: () => {
+      authStore.logout()
+      todoStore.clearAll()
+      message.success('已退出登录')
+    }
+  })
+}
+
+// 自动同步
+const autoSync = async () => {
+  if (authStore.isLocalMode || !authStore.token) return
+  
+  try {
+    await todoStore.syncWithCloud()
+    lastSyncTime.value = new Date().toLocaleTimeString()
+  } catch (error) {
+    console.error('自动同步失败:', error)
+  }
 }
 
 onMounted(() => {
-  store.getAlwaysOnTop()
+  todoStore.getAlwaysOnTop()
+  
+  // 登录后加载数据并同步
+  if (authStore.isLoggedIn && !authStore.isLocalMode) {
+    todoStore.loadFromCloud()
+    autoSync()
+  }
+  
+  // 每 5 分钟自动同步
+  setInterval(autoSync, 5 * 60 * 1000)
+})
+
+// 监听登录状态变化
+watch(() => authStore.isLoggedIn, (newVal) => {
+  if (newVal && !authStore.isLocalMode) {
+    todoStore.loadFromCloud()
+  }
 })
 </script>
 
 <style scoped>
+/* 原有样式保持不变，添加新样式 */
 .app-container {
   display: flex;
   flex-direction: column;
@@ -278,6 +372,19 @@ onMounted(() => {
 .control-btn.active {
   background: rgba(255, 255, 255, 0.3) !important;
   color: #ffd700 !important;
+}
+
+.control-btn.sync {
+  color: #90EE90 !important;
+}
+
+.control-btn.syncing {
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .control-btn.minimize:hover {
@@ -355,6 +462,11 @@ onMounted(() => {
 
 .pin-indicator {
   color: #667eea;
+  font-weight: 500;
+}
+
+.sync-indicator {
+  color: #52c41a;
   font-weight: 500;
 }
 

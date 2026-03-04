@@ -1,14 +1,17 @@
 import { defineStore } from 'pinia'
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
+import { useAuthStore } from './auth'
 import type { Todo, TodoFilter } from '../types/todo'
 
 // 生成唯一ID
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2)
 
 // 本地存储键名
-const STORAGE_KEY = 'lzuea-todo-items'
+const STORAGE_KEY = 'lzuea_todo_items'
 
 export const useTodoStore = defineStore('todo', () => {
+  const authStore = useAuthStore()
+  
   // State
   const todos = ref<Todo[]>([])
   const filter = ref<TodoFilter>('all')
@@ -106,6 +109,11 @@ export const useTodoStore = defineStore('todo', () => {
     saveTodos()
   }
 
+  const clearAll = () => {
+    todos.value = []
+    saveTodos()
+  }
+
   const setFilter = (newFilter: TodoFilter) => {
     filter.value = newFilter
   }
@@ -121,6 +129,70 @@ export const useTodoStore = defineStore('todo', () => {
     const state = await window.electronAPI.window.getAlwaysOnTop()
     alwaysOnTop.value = state
     return state
+  }
+
+  // 同步到云端
+  const syncWithCloud = async () => {
+    if (authStore.isLocalMode) return
+    
+    const result = await authStore.syncData(todos.value)
+    
+    // 合并云端数据
+    if (result.todos && result.todos.length > 0) {
+      const cloudTodos = result.todos.map((t: any) => ({
+        id: t.id,
+        text: t.text,
+        completed: t.completed,
+        createdAt: new Date(t.created_at).getTime(),
+        updatedAt: new Date(t.updated_at).getTime()
+      }))
+      
+      // 合并逻辑：以 updatedAt 为准，取最新的
+      const merged = new Map()
+      
+      // 先加入本地数据
+      todos.value.forEach(t => merged.set(t.id, t))
+      
+      // 再合并云端数据
+      cloudTodos.forEach((cloudTodo: Todo) => {
+        const localTodo = merged.get(cloudTodo.id)
+        if (!localTodo || cloudTodo.updatedAt > localTodo.updatedAt) {
+          merged.set(cloudTodo.id, cloudTodo)
+        }
+      })
+      
+      todos.value = Array.from(merged.values())
+        .filter((t: Todo) => !t.deleted)
+        .sort((a: Todo, b: Todo) => b.createdAt - a.createdAt)
+      
+      saveTodos()
+    }
+  }
+
+  // 从云端加载
+  const loadFromCloud = async () => {
+    if (authStore.isLocalMode) {
+      loadTodos()
+      return
+    }
+    
+    try {
+      const cloudTodos = await authStore.fetchCloudTodos()
+      if (cloudTodos && cloudTodos.length > 0) {
+        todos.value = cloudTodos.map((t: any) => ({
+          id: t.id,
+          text: t.text,
+          completed: t.completed,
+          createdAt: new Date(t.created_at).getTime(),
+          updatedAt: new Date(t.updated_at).getTime()
+        }))
+        saveTodos()
+      } else {
+        loadTodos()
+      }
+    } catch (error) {
+      loadTodos()
+    }
   }
 
   // 初始化
@@ -139,9 +211,12 @@ export const useTodoStore = defineStore('todo', () => {
     editTodo,
     deleteTodo,
     clearCompleted,
+    clearAll,
     setFilter,
     loadTodos,
     toggleAlwaysOnTop,
-    getAlwaysOnTop
+    getAlwaysOnTop,
+    syncWithCloud,
+    loadFromCloud
   }
 })
