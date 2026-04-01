@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "system-ui", "-apple-system", sans-serif;
+}
+
+:root {
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light;
+  color: #1e293b;
+  background-color: #f1f5f9;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background-color: #f1f5f9;
+}
+
+#app {
+  height: 100%;
+}
+
+/* Markdown 内容排版样式 (.md) */
+.md h1, .md h2, .md h3 {
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  color: #0f172a;
+}
+.md h1 { font-size: 1.25rem; }
+.md h2 { font-size: 1.125rem; }
+.md h3 { font-size: 1rem; }
+
+.md p {
+  margin-bottom: 0.75em;
+  line-height: 1.6;
+}
+
+.md ul, .md ol {
+  margin-bottom: 0.75em;
+  padding-left: 1.5em;
+}
+
+.md li {
+  margin-bottom: 0.25em;
+}
+
+.md code {
+  background-color: #f1f5f9;
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9em;
+  color: #e11d48;
+}
+
+.md pre {
+  background-color: #1e293b;
+  color: #f8fafc;
+  padding: 1em;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin-bottom: 0.75em;
+}
+
+.md pre code {
+  background-color: transparent;
+  padding: 0;
+  color: inherit;
+}
+
+.md a {
+  color: #2563eb;
+  text-decoration: underline;
+}
